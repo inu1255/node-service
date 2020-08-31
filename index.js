@@ -38,7 +38,11 @@ const argv = require("yargs")
 
 async function run() {
 	let svc = new Service(path.join(argv.p, argv.s), argv.n, argv.d);
-	await svc[argv._[0]]();
+	let key = svc[argv._[0]] ? argv._[0] : "reinstall";
+	await svc[key]().then(
+		() => console.log(`${key} success`),
+		(e) => console.log(`${key} error: `, e)
+	);
 }
 
-run().catch(console.error);
+run();
