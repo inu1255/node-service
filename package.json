@@ -1,0 +1,32 @@
+{
+  "name": "node-service",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "inu1255",
+  "license": "MIT",
+  "bin": "index.js",
+  "dependencies": {
+    "yargs": "^15.4.1",
+    "node-mac": "^1.0.1",
+    "node-windows": "^1.0.0-beta.5",
+    "node-linux": "^0.1.12"
+  },
+  "optionalDependencies": {
+    "node-mac": "^1.0.1",
+    "node-windows": "^1.0.0-beta.5",
+    "node-linux": "^0.1.12"
+  },
+  "devDependencies": {},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/inu1255/node-service.git"
+  },
+  "bugs": {
+    "url": "https://github.com/inu1255/node-service/issues"
+  },
+  "homepage": "https://github.com/inu1255/node-service#readme",
+  "description": ""
+}
