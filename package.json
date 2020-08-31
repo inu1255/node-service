@@ -1,13 +1,13 @@
 {
   "name": "isrv",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "inu1255",
   "license": "MIT",
-  "bin": "index.js",
+  "bin": "bin.js",
   "dependencies": {
     "yargs": "^15.4.1",
     "node-mac": "^1.0.1",

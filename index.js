@@ -1,48 +1,112 @@
-#!/usr/bin/env node
-const Service = require("./service");
 const path = require("path");
-const argv = require("yargs")
-	.option("s", {
-		alias: "script",
-		demand: true,
-		desc: "脚本文件名,不带路径",
-		type: "string",
-	})
-	.option("n", {
-		alias: "name",
-		demand: true,
-		desc: "服务名称",
-		type: "string",
-	})
-	.option("d", {
-		alias: "desc",
-		default: "",
-		desc: "服务说明",
-		type: "string",
-	})
-	.option("p", {
-		alias: "path",
-		default: process.cwd(),
-		defaultDescription: "当前路径",
-		desc: "脚本全路径,默认当前路径",
-		type: "string",
-	})
-	.command("install", "安装服务")
-	.command("uninstall", "卸载服务")
-	.command("reinstall", "重新安装服务")
-	.command("start", "启动服务")
-	.command("stop", "停止服务")
-	.command("restart", "重启服务")
-	.help("h")
-	.alias("h", "help").argv;
-
-async function run() {
-	let svc = new Service(path.join(argv.p, argv.s), argv.n, argv.d);
-	let key = svc[argv._[0]] ? argv._[0] : "reinstall";
-	await svc[key]().then(
-		() => console.log(`${key} success`),
-		(e) => console.log(`${key} error: `, e)
-	);
+const fs = require("fs");
+/**
+ * @param {string} script
+ * @param {string} name
+ * @param {string} description
+ */
+function createService(script, name, description) {
+	let config = {
+		name,
+		description,
+		script,
+		wait: 1,
+		grow: 0.25,
+		maxRestarts: 40,
+	};
+	if (process.platform == "win32") {
+		if (script.indexOf(":") < 0) script = path.join(process.cwd(), script);
+	} else {
+		if (script[0] != "/") script = path.join(process.cwd(), script);
+	}
+	if (!fs.existsSync(script)) throw new Error(`script not exists: ${script}`);
+	if (process.platform == "win32") {
+		if (script.indexOf(":") < 0) script = path.join(process.cwd(), script);
+		const {Service} = require("node-windows");
+		return new Service(config);
+	}
+	if (process.platform == "darwin") {
+		const {Service} = require("node-mac");
+		return new Service(config);
+	}
+	const {Service} = require("node-linux");
+	return new Service(config);
 }
 
-run();
+class Service {
+	/**
+	 * @param {string} script
+	 * @param {string} name
+	 * @param {string} description
+	 */
+	constructor(script, name, description) {
+		this.svc = createService(script, name, description);
+		let events = ["install", "alreadyinstalled", "invalidinstallation", "uninstall", "alreadyuninstalled", "start", "stop", "error"];
+		for (let event of events) {
+			var that = this;
+			this.svc.on(event, function (e) {
+				let key = "_" + event;
+				if (that[key]) {
+					that[key](e);
+					delete that[key];
+				}
+			});
+		}
+	}
+	status() {
+		let {id, name, description, script, logpath, exists} = this.svc;
+		console.log(JSON.stringify({id, name, description, script, logpath, exists}, null, 2));
+	}
+	install() {
+		var that = this;
+		return new Promise(function (resolve, reject) {
+			if (that.svc.exists) return resolve();
+			that._install = resolve;
+			that._alreadyinstalled = resolve;
+			that._error = reject;
+			that._invalidinstallation = reject;
+			that.svc.install();
+		});
+	}
+	uninstall() {
+		var that = this;
+		return new Promise(function (resolve, reject) {
+			if (!that.svc.exists) return resolve();
+			that._error = reject;
+			that._uninstall = resolve;
+			that.svc.uninstall();
+		});
+	}
+	reinstall() {
+		var that = this;
+		return that.uninstall().then(function () {
+			return that.start();
+		});
+	}
+	start() {
+		var that = this;
+		if (!that.svc.exists) return this.install().then(() => this.start());
+		return new Promise(function (resolve, reject) {
+			that._error = reject;
+			that._start = resolve;
+			that.svc.start();
+		});
+	}
+	stop() {
+		var that = this;
+		return new Promise(function (resolve, reject) {
+			if (!that.svc.exists) return resolve();
+			that._error = reject;
+			that._stop = resolve;
+			that.svc.stop();
+		});
+	}
+	restart() {
+		var that = this;
+		return that.stop().then(function () {
+			return that.start();
+		});
+	}
+}
+
+module.exports = Service;
